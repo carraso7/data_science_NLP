@@ -2,6 +2,7 @@ name: quora_challenge_env
 channels:
   - defaults
   - conda-forge
+  - pytorch
 dependencies:
   - python=3.9
   - numpy>=1.23
@@ -13,5 +14,7 @@ dependencies:
   - jupyter
   - notebook
   - ipykernel
-  - sentence-transformers
-  - torch
+  - pytorch
+  - pip
+  - pip:
+      - sentence-transformers
