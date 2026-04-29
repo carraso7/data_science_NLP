@@ -9,6 +9,7 @@ from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
+from sentence_transformers import SentenceTransformer
 
 
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
@@ -164,17 +165,40 @@ def get_tfidf_cosine_features(df: pd.DataFrame, tfidf_vectorizer: TfidfVectorize
     return cosine_values.astype(np.float32).reshape(-1, 1)
 
 
+def get_st_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
+    return SentenceTransformer(model_name)
+
+
+def get_st_cosine_features(df: pd.DataFrame, model: SentenceTransformer) -> np.ndarray:
+    q1_embeddings = model.encode(df["question1"].fillna("").tolist(), show_progress_bar=False)
+    q2_embeddings = model.encode(df["question2"].fillna("").tolist(), show_progress_bar=False)
+
+    # Normalize and compute row-wise dot product
+    q1_norm = q1_embeddings / (np.linalg.norm(q1_embeddings, axis=1, keepdims=True) + 1e-9)
+    q2_norm = q2_embeddings / (np.linalg.norm(q2_embeddings, axis=1, keepdims=True) + 1e-9)
+
+    cosine_sim = (q1_norm * q2_norm).sum(axis=1)
+    return cosine_sim.astype(np.float32).reshape(-1, 1)
+
+
 def build_all_features(
     df: pd.DataFrame,
     count_vectorizer: CountVectorizer,
     tfidf_vectorizer: TfidfVectorizer,
+    st_model: SentenceTransformer = None,
 ):
     x_bow = get_bow_features(df, count_vectorizer)
     x_jaccard = sparse.csr_matrix(get_jaccard_features(df))
     x_tfidf_cosine = sparse.csr_matrix(get_tfidf_cosine_features(df, tfidf_vectorizer))
     x_length = sparse.csr_matrix(get_length_features(df))
 
-    return sparse.hstack([x_bow, x_jaccard, x_tfidf_cosine, x_length], format="csr")
+    features = [x_bow, x_jaccard, x_tfidf_cosine, x_length]
+
+    if st_model is not None:
+        x_st_cosine = sparse.csr_matrix(get_st_cosine_features(df, st_model))
+        features.append(x_st_cosine)
+
+    return sparse.hstack(features, format="csr")
 
 
 def evaluate_model(model, x, y_true: np.ndarray, name: str = "model") -> Dict[str, float]:
