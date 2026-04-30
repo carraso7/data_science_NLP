@@ -1,0 +1,386 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+
+% Colors
+\definecolor{accentblue}{RGB}{30, 90, 160}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{darkgray}{RGB}{80, 80, 80}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=accentblue,
+    urlcolor=accentblue,
+    citecolor=accentblue,
+}
+
+% Section formatting
+\titleformat{\section}{\large\bfseries\color{accentblue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{}{0em}{}
+
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+
+% Header/footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small\color{darkgray}NLP Deliverable 1 --- Quora Question Pairs}
+\lhead{\small\color{darkgray}Sanfeliu \textperiodcentered{} Raso \textperiodcentered{} Anguera}
+\rfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+% ──────────────────────────────────────────────────────────
+%  Title page
+% ──────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\LARGE\bfseries\color{accentblue} NLP Deliverable 1\par}
+    \vspace{0.4cm}
+    {\large Quora Question Pairs --- Duplicate Detection\par}
+    \vspace{1.5cm}
+    \rule{0.6\textwidth}{0.8pt}\par
+    \vspace{1cm}
+    {\large
+        Joel Sanfeliu\\[4pt]
+        Carlos Raso\\[4pt]
+        Pau Anguera\par}
+    \vspace{1cm}
+    \rule{0.6\textwidth}{0.8pt}\par
+    \vspace{1.5cm}
+    {\normalsize Universitat de Barcelona\\
+    Natural Language Processing\\
+    \today\par}
+    \vfill
+    {\small Submitted to: \texttt{daniel.ortiz@ub.edu}}
+\end{titlepage}
+
+% ──────────────────────────────────────────────────────────
+%  Table of contents
+% ──────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ──────────────────────────────────────────────────────────
+\section{Introduction}
+% ──────────────────────────────────────────────────────────
+
+The Quora Question Pairs challenge requires determining whether two questions posted on Quora are semantically equivalent (i.e.\ duplicates). This deliverable presents a complete machine-learning pipeline addressing that binary classification task. We implement a \textbf{baseline} model based on Bag-of-Words features and an \textbf{improved} model that enriches the feature set with multiple hand-crafted and distributional similarity measures, all combined into a single Logistic Regression classifier.
+
+The report is organized as follows: Section~\ref{sec:data} describes the dataset and splits; Section~\ref{sec:baseline} details the baseline approach; Section~\ref{sec:features} explains each engineered feature; Section~\ref{sec:improved} presents the improved model; Section~\ref{sec:results} reports and analyses the evaluation metrics; and Section~\ref{sec:contributions} summarises the work distribution.
+
+% ──────────────────────────────────────────────────────────
+\section{Dataset and Data Splits}
+\label{sec:data}
+% ──────────────────────────────────────────────────────────
+
+The dataset is the publicly available Quora Question Pairs corpus. Because it is a Kaggle challenge without labelled test data, we create our own fixed splits using the following procedure (random seed 123 throughout):
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+    \item A 95\,/\,5 stratified split yields the \emph{train+val} set and the \textbf{test set}.
+    \item The train+val portion is further split 95\,/\,5 to give the \textbf{training set} and the \textbf{validation set}.
+\end{enumerate}
+
+The resulting split sizes are shown in Table~\ref{tab:splits}.
+
+\begin{table}[h]
+\centering
+\caption{Dataset splits used throughout the project.}
+\label{tab:splits}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Split} & \textbf{Samples} & \textbf{Share} \\
+\midrule
+Training   & 291{,}897 & $\approx 90.25\%$ \\
+Validation &  15{,}363 & $\approx 4.75\%$  \\
+Test       &  16{,}172 & $\approx 5.00\%$  \\
+\midrule
+Total      & 323{,}432 & 100\%             \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All vectorizers and models are fitted \emph{exclusively} on the training split to prevent any form of data leakage.
+
+% ──────────────────────────────────────────────────────────
+\section{Baseline Model}
+\label{sec:baseline}
+% ──────────────────────────────────────────────────────────
+
+\subsection{Feature Representation}
+
+The baseline uses a \textbf{Bag-of-Words} (BoW) representation. A \texttt{CountVectorizer} with unigrams is fitted on all training questions (both \texttt{question1} and \texttt{question2}), yielding a vocabulary of \textbf{74{,}825} tokens. Each question pair is represented by the horizontal concatenation of the two BoW vectors, producing a sparse feature matrix of shape $(n,\,149{,}650)$.
+
+\subsection{Classifier}
+
+A Logistic Regression (LR) model with the \texttt{liblinear} solver and \texttt{random\_state=123} is trained on these features. The decision threshold is kept at the default value of 0.5.
+
+\subsection{Limitations}
+
+The BoW baseline suffers from several known shortcomings:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{No semantic distance:} the two question vectors are concatenated but never compared — the model learns association weights independently, not the similarity between the pair.
+    \item \textbf{Vocabulary mismatch:} paraphrases that use different words (``automobile'' vs.\ ``car'') score zero overlap.
+    \item \textbf{Ignores word importance:} common words like \emph{what} or \emph{how} receive the same weight as informative content words.
+    \item \textbf{No character-level robustness:} typos or slight morphological variations break exact word matching.
+\end{itemize}
+
+% ──────────────────────────────────────────────────────────
+\section{Engineered Features}
+\label{sec:features}
+% ──────────────────────────────────────────────────────────
+
+Three additional similarity features are implemented from scratch, each assigned to one group member.
+
+% ── 4.1 ──────────────────────────────────────────────────
+\subsection{Token-Level Jaccard Similarity \textnormal{(Joel Sanfeliu)}}
+
+\subsubsection{Definition}
+
+Given two strings, let $A$ and $B$ be the \emph{sets of lower-case alphanumeric tokens} obtained from each string. The Jaccard similarity is:
+
+\[
+    J(A,B) = \frac{|A \cap B|}{|A \cup B|}
+\]
+
+The function returns 0 when both sets are empty. It is implemented entirely from scratch — no \texttt{sklearn} or \texttt{scipy} helper functions are used.
+
+\subsubsection{Rationale}
+
+Jaccard is insensitive to document length (unlike raw word-overlap counts) and has a natural interpretation: $J=0$ means no shared tokens; $J=1$ means identical token sets. Duplicate questions tend to share most of their vocabulary, so high Jaccard scores are a strong signal.
+
+\subsubsection{Empirical Validation}
+
+On a random sample of 500 training pairs:
+
+\begin{table}[h]
+\centering
+\caption{Jaccard similarity statistics by class.}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Subset} & \textbf{Mean} & \textbf{Std} \\
+\midrule
+All pairs       & 0.364 & 0.236 \\
+Duplicates      & 0.465 & ---   \\
+Non-duplicates  & 0.301 & ---   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The clear separation between classes confirms the feature's discriminative power.
+
+% ── 4.2 ──────────────────────────────────────────────────
+\subsection{Length and Word-Overlap Features \textnormal{(Joel Sanfeliu)}}
+
+Four hand-crafted features capture structural similarity between question pairs:
+
+\begin{table}[h]
+\centering
+\caption{Length and overlap features.}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Feature} & \textbf{Description} \\
+\midrule
+\texttt{len\_diff}           & $|$\textit{len}$(q_1) - $\textit{len}$(q_2)|$ at character level \\
+\texttt{word\_count\_diff}   & $|$\textit{words}$(q_1) - $\textit{words}$(q_2)|$ \\
+\texttt{common\_word\_ratio} & $|\text{tokens}(q_1) \cap \text{tokens}(q_2)| \;/\; \max(\text{words}(q_1),\,\text{words}(q_2))$ \\
+\texttt{len\_ratio}          & $\min(\text{len}(q_1),\text{len}(q_2)) \;/\; \max(\text{len}(q_1),\text{len}(q_2))$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The \texttt{common\_word\_ratio} shows a mean of 0.544 for duplicate pairs vs.\ 0.361 for non-duplicates on the 500-sample evaluation.
+
+% ── 4.3 ──────────────────────────────────────────────────
+\subsection{TF-IDF Cosine Similarity \textnormal{(Carlos Raso)}}
+
+\subsubsection{TF-IDF Vectorization}
+
+A \texttt{TfidfVectorizer} with unigrams and bigrams (\texttt{ngram\_range=(1,2)}), \texttt{sublinear\_tf=True}, and a maximum vocabulary of \textbf{50{,}000} features is fitted on the training questions. The larger bigram vocabulary captures local phrase structure beyond single-word matching.
+
+\subsubsection{Cosine Similarity (from scratch)}
+
+Given two sparse row vectors $\mathbf{u}$ and $\mathbf{v}$:
+
+\[
+    \cos(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \cdot \|\mathbf{v}\|}
+\]
+
+The implementation operates directly on \texttt{scipy.sparse} matrices (dot product and norms via \texttt{.dot()} and \texttt{.toarray()}), with a guard against zero-norm vectors. For the full dataset, vectorised numpy operations are used to compute all cosine scores in a single pass, avoiding a Python-level loop.
+
+\subsubsection{Advantage over Jaccard}
+
+TF-IDF down-weights high-frequency function words (\emph{what}, \emph{how}, \emph{the}) and up-weights rare, informative content words. Two questions sharing the word \emph{photosynthesis} receive a larger similarity boost than two questions both containing \emph{what}, unlike Jaccard which treats all tokens equally.
+
+\subsubsection{Empirical Validation}
+
+\begin{table}[h]
+\centering
+\caption{TF-IDF cosine similarity statistics by class (500-sample evaluation).}
+\begin{tabular}{lc}
+\toprule
+\textbf{Subset} & \textbf{Mean cosine} \\
+\midrule
+Duplicates     & 0.477 \\
+Non-duplicates & 0.328 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ── 4.4 ──────────────────────────────────────────────────
+\subsection{Character 3-gram Similarity \textnormal{(Pau Anguera)}}
+
+\subsubsection{Definition}
+
+Let $G_n(s)$ be the set of unique character $n$-grams of string $s$ (with $n=3$ by default). The character-level Jaccard similarity is:
+
+\[
+    C(s_1, s_2) = \frac{|G_3(s_1) \cap G_3(s_2)|}{|G_3(s_1) \cup G_3(s_2)|}
+\]
+
+Both strings are lower-cased before extraction. Empty strings return 0.
+
+\subsubsection{Motivation}
+
+Word-level methods (Jaccard, BoW, TF-IDF) fail when questions contain typos or morphological variants. Character $n$-grams decompose words into overlapping sub-strings, making the similarity measure robust to such noise. For example, \emph{python} and \emph{pyton} share zero words but share the 3-grams \emph{pyt}, \emph{yth}/\emph{yto}, \emph{tho}/\emph{ton}.
+
+\subsubsection{Empirical Validation}
+
+\begin{table}[h]
+\centering
+\caption{Character 3-gram similarity statistics by class (500-sample evaluation).}
+\begin{tabular}{lc}
+\toprule
+\textbf{Subset} & \textbf{Mean similarity} \\
+\midrule
+Duplicates     & 0.464 \\
+Non-duplicates & 0.297 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The feature provides approximately 56\% higher average similarity for duplicate pairs, and handles typos that break word-level matching (e.g.\ ``How do I learn Python?'' vs.\ ``How do I lern Pyton?'' yields a similarity of 0.58 despite having no words in common after the typos).
+
+% ──────────────────────────────────────────────────────────
+\section{Improved Model}
+\label{sec:improved}
+% ──────────────────────────────────────────────────────────
+
+\subsection{Feature Combination}
+
+The improved feature matrix horizontally concatenates all individual feature blocks:
+
+\[
+    \mathbf{X}_{\text{all}} = \left[\,
+        \mathbf{X}_{\text{BoW}}\;\big|\;
+        \mathbf{x}_{\text{Jaccard}}\;\big|\;
+        \mathbf{x}_{\text{TF-IDF cos}}\;\big|\;
+        \mathbf{X}_{\text{length}}\;\big|\;
+        \mathbf{x}_{\text{char-3g}}
+    \,\right]
+\]
+
+The resulting matrix has shape $(n,\,149{,}657)$: 149{,}650 BoW dimensions plus 7 engineered features (1 Jaccard, 1 TF-IDF cosine, 4 length, 1 character $n$-gram). All matrices are stored as \texttt{scipy.sparse.csr\_matrix} for memory efficiency.
+
+\subsection{Classifier}
+
+The same Logistic Regression architecture is used (\texttt{liblinear}, \texttt{C=1.0}, \texttt{random\_state=123}, \texttt{max\_iter=200}), allowing a fair comparison with the baseline.
+
+% ──────────────────────────────────────────────────────────
+\section{Results}
+\label{sec:results}
+% ──────────────────────────────────────────────────────────
+
+\subsection{Evaluation Protocol}
+
+Models are evaluated using three metrics from \texttt{sklearn.metrics}:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{ROC-AUC} (\texttt{roc\_auc\_score}): threshold-independent measure of ranking quality.
+    \item \textbf{Precision} (\texttt{precision\_score}): fraction of predicted duplicates that are true duplicates.
+    \item \textbf{Recall} (\texttt{recall\_score}): fraction of true duplicates that the model retrieves.
+\end{itemize}
+
+Probabilities are obtained via \texttt{predict\_proba}, and a decision threshold of 0.5 is used for precision/recall.
+
+\subsection{Summary Table}
+
+\begin{table}[h]
+\centering
+\caption{Evaluation results for both models across all splits.}
+\label{tab:results}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Model} & \textbf{Split} & \textbf{ROC-AUC} & \textbf{Precision} & \textbf{Recall} \\
+\midrule
+\multirow{3}{*}{Baseline (BoW + LR)}
+    & Train & 0.8899 & 0.7820 & 0.6867 \\
+    & Val   & 0.8046 & 0.6774 & 0.6106 \\
+    & Test  & 0.8137 & 0.6952 & 0.6186 \\
+\midrule
+\multirow{3}{*}{Improved (All features + LR)}
+    & Train & 0.9211 & 0.7979 & 0.7701 \\
+    & Val   & 0.8670 & 0.7287 & 0.6949 \\
+    & Test  & 0.8712 & 0.7319 & 0.6975 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Analysis}
+
+\textbf{Baseline.} The BoW + LR model achieves a test ROC-AUC of 0.8137. The gap between training (0.8899) and validation (0.8046) AUC indicates moderate overfitting, expected given the high-dimensional sparse input with no explicit regularisation tuning.
+
+\textbf{Improved model.} Adding the seven engineered features increases every metric substantially:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{ROC-AUC:} $+0.0575$ on the test set ($+7.1\%$ relative), reaching 0.8712.
+    \item \textbf{Recall:} $+0.0789$ on the test set ($+12.8\%$ relative) — the model now captures a much larger fraction of actual duplicate pairs.
+    \item \textbf{Precision:} $+0.0367$ on the test set ($+5.3\%$ relative).
+\end{itemize}
+
+The train--test gap for the improved model (AUC: $0.9211 \to 0.8712$) is comparable to the baseline, suggesting the engineered features do not introduce additional overfitting. The key improvement is that the similarity-based features give the model a direct signal about \emph{how similar} the two questions are, rather than forcing it to learn this relationship implicitly from paired word occurrences.
+
+% ──────────────────────────────────────────────────────────
+\section{Work Distribution}
+\label{sec:contributions}
+% ──────────────────────────────────────────────────────────
+
+\begin{table}[h]
+\centering
+\caption{Contributions by group member.}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Member} & \textbf{Contributions} \\
+\midrule
+\textbf{Joel Sanfeliu}
+    & Implemented \texttt{jaccard\_similarity} (from scratch), \texttt{get\_jaccard\_features}, and \texttt{get\_length\_features}. Documented usage and class-wise analysis in \texttt{utils\_StudentA.ipynb}. \\[4pt]
+\textbf{Carlos Raso}
+    & Implemented \texttt{fit\_tfidf\_vectorizer}, \texttt{cosine\_similarity\_sparse} (from scratch), and \texttt{get\_tfidf\_cosine\_features}. Documented usage and comparative analysis in \texttt{utils\_StudentB.ipynb}. \\[4pt]
+\textbf{Pau Anguera}
+    & Implemented \texttt{char\_ngram\_similarity} (from scratch) and \texttt{get\_char\_ngram\_features}. Documented the character-level approach and typo-robustness analysis in \texttt{utils\_StudentC.ipynb}. \\
+\midrule
+\textbf{All members}
+    & Jointly responsible for \texttt{train\_models.ipynb}, \texttt{reproduce\_results.ipynb}, \texttt{utils.py} (shared utilities: data splits, BoW vectorizer, feature assembly, evaluation, model I/O), and the \texttt{environment.yml} file. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}
