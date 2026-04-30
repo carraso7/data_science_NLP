@@ -51,24 +51,24 @@ Run the reproduction notebook to load the trained models from disk and view the 
 *   **`quora_data.csv`**: The primary dataset containing question pairs and duplicate labels.
 *   **`delivery_1_quora/utils.py`**: The heart of the project. Contains all logic for:
     *   Data splitting (Train/Val/Test).
-    *   Feature engineering (Bag of Words, Jaccard Similarity, TF-IDF Cosine, Length features).
+    *   Feature engineering (Bag of Words, Word-level Jaccard, TF-IDF Cosine, Length features, and **Character N-grams**).
     *   Model evaluation and saving.
 *   **`delivery_1_quora/environment.yml`**: Configuration file to recreate the exact Python environment.
 
 ### Notebooks
 *   **`train_models.ipynb`**: Handles the full pipeline from data loading to saving the final `.pkl` models.
 *   **`reproduce_results.ipynb`**: A lightweight notebook that only loads models and calculates metrics (no training happens here).
-*   **`utils_StudentA/B/C.ipynb`**: Individual notebooks where each group member explains their specific contribution and tests their custom features.
+*   **`utils_Joel_Sanfeliu/Carlos_Raso/Pau_Anguera.ipynb`**: Individual notebooks where each group member (Joel, Carlos, and Pau) explains their specific contribution and tests their custom features.
 
 ### Output
 *   **`delivery_1_quora/models/`**: (Generated) Contains the saved `CountVectorizer`, `TfidfVectorizer`, and trained `LogisticRegression` models.
 
 ---
 
-## 📊 Features & Model
 The project implements an **Improved Logistic Regression** model that combines:
 - **Baseline**: Bag-of-Words (BoW) vectors.
-- **Distances**: Jaccard and TF-IDF Cosine similarities.
-- **Structure**: Sentence length differences and word count ratios.
+- **Distances**: Word-level Jaccard (Joel) and TF-IDF Cosine (Carlos) similarities.
+- **Structure**: Sentence length differences and word count ratios (Joel).
+- **Robustness**: Character 3-gram similarity (Pau) to handle typos and spelling variations.
 
 The improved model consistently achieves a higher ROC-AUC compared to the simple baseline.
