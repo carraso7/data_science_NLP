@@ -136,7 +136,7 @@ A Logistic Regression (LR) model with the \texttt{liblinear} solver and \texttt{
 The BoW baseline suffers from several known shortcomings:
 
 \begin{itemize}[leftmargin=*]
-    \item \textbf{No semantic distance:} the two question vectors are concatenated but never compared — the model learns association weights independently, not the similarity between the pair.
+    \item \textbf{No semantic distance:} the two question vectors are concatenated but never compared. The model learns association weights independently, not the similarity between the pair.
     \item \textbf{Vocabulary mismatch:} paraphrases that use different words (``automobile'' vs.\ ``car'') score zero overlap.
     \item \textbf{Ignores word importance:} common words like \emph{what} or \emph{how} receive the same weight as informative content words.
     \item \textbf{No character-level robustness:} typos or slight morphological variations break exact word matching.
@@ -160,7 +160,7 @@ Given two strings, let $A$ and $B$ be the \emph{sets of lower-case alphanumeric 
     J(A,B) = \frac{|A \cap B|}{|A \cup B|}
 \]
 
-The function returns 0 when both sets are empty. It is implemented entirely from scratch — no \texttt{sklearn} or \texttt{scipy} helper functions are used.
+The function returns 0 when both sets are empty. It is implemented entirely from scratch, no \texttt{sklearn} or \texttt{scipy} helper functions are used.
 
 
 Jaccard is insensitive to document length (unlike raw word-overlap counts) and has a natural interpretation: $J=0$ means no shared tokens; $J=1$ means identical token sets. Duplicate questions tend to share most of their vocabulary, so high Jaccard scores are a strong signal.
@@ -350,7 +350,7 @@ Probabilities are obtained via \texttt{predict\_proba}, and a decision threshold
 
 \begin{itemize}[leftmargin=*]
     \item \textbf{ROC-AUC:} $+0.0575$ on the test set ($+7.1\%$ relative), reaching 0.8712.
-    \item \textbf{Recall:} $+0.0789$ on the test set ($+12.8\%$ relative) — the model now captures a much larger fraction of actual duplicate pairs.
+    \item \textbf{Recall:} $+0.0789$ on the test set ($+12.8\%$ relative). The model now captures a much larger fraction of actual duplicate pairs.
     \item \textbf{Precision:} $+0.0367$ on the test set ($+5.3\%$ relative).
 \end{itemize}
 
