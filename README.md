@@ -17,6 +17,24 @@ conda env create -f delivery_1_quora/environment.yml --name quora_challenge_env
 conda activate quora_challenge_env
 ```
 
+### Windows Setup (Without Conda)
+If you are on Windows or prefer not to use Conda, you can set up the project using Python's built-in `venv` and `pip`:
+
+**1. Create a virtual environment**
+```powershell
+python -m venv quora_env
+```
+
+**2. Activate the environment**
+```powershell
+.\quora_env\Scripts\activate
+```
+
+**3. Install dependencies**
+```powershell
+pip install numpy scipy pandas scikit-learn joblib reportlab jupyter notebook ipykernel torch sentence-transformers
+```
+
 ### 3. Train the Models
 If the `models/` directory is missing or you want to refresh the models, run the training notebook. This notebook splits the data, creates features, and saves the models to disk.
 - **File**: `delivery_1_quora/train_models.ipynb`

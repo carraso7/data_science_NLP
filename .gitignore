@@ -1,0 +1,5 @@
+# Virtual Environments
+quora_env/
+delivery_1_quora/quora_data.csv
+delivery_1_quora/__pycache__/
+delivery_1_quora/.ipynb_checkpoints/
