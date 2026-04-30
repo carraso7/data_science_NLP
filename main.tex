@@ -69,7 +69,6 @@
     Natural Language Processing\\
     \today\par}
     \vfill
-    {\small Submitted to: \texttt{daniel.ortiz@ub.edu}}
 \end{titlepage}
 
 % ──────────────────────────────────────────────────────────
@@ -163,7 +162,6 @@ Given two strings, let $A$ and $B$ be the \emph{sets of lower-case alphanumeric 
 
 The function returns 0 when both sets are empty. It is implemented entirely from scratch — no \texttt{sklearn} or \texttt{scipy} helper functions are used.
 
-\subsubsection{Rationale}
 
 Jaccard is insensitive to document length (unlike raw word-overlap counts) and has a natural interpretation: $J=0$ means no shared tokens; $J=1$ means identical token sets. Duplicate questions tend to share most of their vocabulary, so high Jaccard scores are a strong signal.
 
