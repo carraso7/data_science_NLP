@@ -9,7 +9,7 @@ from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
-from sentence_transformers import SentenceTransformer
+
 
 
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
@@ -165,38 +165,43 @@ def get_tfidf_cosine_features(df: pd.DataFrame, tfidf_vectorizer: TfidfVectorize
     return cosine_values.astype(np.float32).reshape(-1, 1)
 
 
-def get_st_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
-    return SentenceTransformer(model_name)
+def char_ngram_similarity(text_1: str, text_2: str, n: int = 3) -> float:
+    s1 = _safe_text(text_1).lower()
+    s2 = _safe_text(text_2).lower()
+    
+    if not s1 or not s2:
+        return 0.0
+        
+    ngrams_1 = set([s1[i : i + n] for i in range(len(s1) - n + 1)])
+    ngrams_2 = set([s2[i : i + n] for i in range(len(s2) - n + 1)])
+    
+    union_size = len(ngrams_1 | ngrams_2)
+    if union_size == 0:
+        return 0.0
+        
+    return len(ngrams_1 & ngrams_2) / union_size
 
 
-def get_st_cosine_features(df: pd.DataFrame, model: SentenceTransformer) -> np.ndarray:
-    q1_embeddings = model.encode(df["question1"].fillna("").tolist(), show_progress_bar=False)
-    q2_embeddings = model.encode(df["question2"].fillna("").tolist(), show_progress_bar=False)
-
-    # Normalize and compute row-wise dot product
-    q1_norm = q1_embeddings / (np.linalg.norm(q1_embeddings, axis=1, keepdims=True) + 1e-9)
-    q2_norm = q2_embeddings / (np.linalg.norm(q2_embeddings, axis=1, keepdims=True) + 1e-9)
-
-    cosine_sim = (q1_norm * q2_norm).sum(axis=1)
-    return cosine_sim.astype(np.float32).reshape(-1, 1)
+def get_char_ngram_features(df: pd.DataFrame, n: int = 3) -> np.ndarray:
+    values = [
+        char_ngram_similarity(q1, q2, n=n)
+        for q1, q2 in zip(df["question1"].values, df["question2"].values)
+    ]
+    return np.asarray(values, dtype=np.float32).reshape(-1, 1)
 
 
 def build_all_features(
     df: pd.DataFrame,
     count_vectorizer: CountVectorizer,
     tfidf_vectorizer: TfidfVectorizer,
-    st_model: SentenceTransformer = None,
 ):
     x_bow = get_bow_features(df, count_vectorizer)
     x_jaccard = sparse.csr_matrix(get_jaccard_features(df))
     x_tfidf_cosine = sparse.csr_matrix(get_tfidf_cosine_features(df, tfidf_vectorizer))
     x_length = sparse.csr_matrix(get_length_features(df))
+    x_char_ngram = sparse.csr_matrix(get_char_ngram_features(df))
 
-    features = [x_bow, x_jaccard, x_tfidf_cosine, x_length]
-
-    if st_model is not None:
-        x_st_cosine = sparse.csr_matrix(get_st_cosine_features(df, st_model))
-        features.append(x_st_cosine)
+    features = [x_bow, x_jaccard, x_tfidf_cosine, x_length, x_char_ngram]
 
     return sparse.hstack(features, format="csr")
 

@@ -7,7 +7,7 @@ This project aims to solve the **Quora Question Pairs challenge**, where the goa
 Follow these steps in order to set up the environment and see the results:
 
 ### 1. Environment Setup
-Create the Conda environment using the provided YAML file. This ensures all dependencies (including PyTorch and Sentence Transformers) are correctly installed.
+Create the Conda environment using the provided YAML file. This ensures all dependencies (numpy, scipy, scikit-learn, etc.) are correctly installed.
 ```bash
 conda env create -f delivery_1_quora/environment.yml --name quora_challenge_env
 ```
@@ -33,7 +33,7 @@ Run the reproduction notebook to load the trained models from disk and view the 
 *   **`quora_data.csv`**: The primary dataset containing question pairs and duplicate labels.
 *   **`delivery_1_quora/utils.py`**: The heart of the project. Contains all logic for:
     *   Data splitting (Train/Val/Test).
-    *   Feature engineering (Bag of Words, Jaccard Similarity, TF-IDF Cosine, Length features).
+    *   Feature engineering (Bag of Words, Jaccard Similarity, TF-IDF Cosine, Length features, and **Character N-grams**).
     *   Model evaluation and saving.
 *   **`delivery_1_quora/environment.yml`**: Configuration file to recreate the exact Python environment.
 
@@ -50,7 +50,8 @@ Run the reproduction notebook to load the trained models from disk and view the 
 ## 📊 Features & Model
 The project implements an **Improved Logistic Regression** model that combines:
 - **Baseline**: Bag-of-Words (BoW) vectors.
-- **Distances**: Jaccard and TF-IDF Cosine similarities.
+- **Distances**: Word-level Jaccard and TF-IDF Cosine similarities.
 - **Structure**: Sentence length differences and word count ratios.
+- **Robustness**: Character 3-gram similarity to handle typos and spelling variations.
 
 The improved model consistently achieves a higher ROC-AUC compared to the simple baseline.

@@ -14,7 +14,4 @@ dependencies:
   - jupyter
   - notebook
   - ipykernel
-  - pytorch
   - pip
-  - pip:
-      - sentence-transformers
